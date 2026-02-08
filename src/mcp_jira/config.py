@@ -3,7 +3,7 @@ Configuration management for MCP Jira.
 Handles environment variables, settings validation, and configuration defaults.
 """
 
-from pydantic import HttpUrl, SecretStr, field_validator
+from pydantic import HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     # Jira Configuration
     jira_url: HttpUrl
     jira_username: str
-    jira_api_token: SecretStr
+    jira_api_token: Optional[SecretStr] = None
+    jira_password: Optional[SecretStr] = None
     project_key: str
     default_board_id: Optional[int] = None
 
@@ -61,6 +62,13 @@ class Settings(BaseSettings):
             url_str += "/"
         return HttpUrl(url_str)
 
+    @model_validator(mode="after")
+    def validate_auth(self) -> "Settings":
+        """Ensure at least one auth secret is provided."""
+        if not self.jira_api_token and not self.jira_password:
+            raise ValueError("Either jira_api_token or jira_password must be provided")
+        return self
+
 @lru_cache()
 def get_settings() -> Settings:
     """
@@ -87,6 +95,8 @@ ENV_TEMPLATE = """
 JIRA_URL=https://your-domain.atlassian.net
 JIRA_USERNAME=your.email@domain.com
 JIRA_API_TOKEN=your_api_token
+# Optional for on-prem Jira instances that allow username/password auth
+JIRA_PASSWORD=your_password
 PROJECT_KEY=PROJ
 DEFAULT_BOARD_ID=123
 

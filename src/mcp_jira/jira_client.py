@@ -21,9 +21,12 @@ logger = logging.getLogger(__name__)
 class JiraClient:
     def __init__(self, settings: Settings):
         self.base_url = str(settings.jira_url).rstrip('/')
+        auth_secret = settings.jira_password or settings.jira_api_token
+        if auth_secret is None:
+            raise JiraError("Jira auth missing: set JIRA_API_TOKEN or JIRA_PASSWORD")
         self.auth_header = self._create_auth_header(
             settings.jira_username,
-            settings.jira_api_token.get_secret_value()
+            auth_secret.get_secret_value()
         )
         self.project_key = settings.project_key
         self.board_id = settings.default_board_id
