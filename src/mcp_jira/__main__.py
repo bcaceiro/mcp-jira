@@ -49,6 +49,8 @@ def check_env_file():
         print("JIRA_USERNAME=your.email@domain.com", file=sys.stderr)
         print("JIRA_API_TOKEN=your_api_token", file=sys.stderr)
         print("JIRA_PASSWORD=your_password (optional)", file=sys.stderr)
+        print("JIRA_AUTH_MODE=bearer (optional)", file=sys.stderr)
+        print("JIRA_API_VERSION=2 (optional)", file=sys.stderr)
         print("PROJECT_KEY=PROJ", file=sys.stderr)
         print("DEFAULT_BOARD_ID=123", file=sys.stderr)
         print("", file=sys.stderr)

@@ -7,6 +7,7 @@ from pydantic import HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
+from urllib.parse import urlparse
 from functools import lru_cache
 
 class Settings(BaseSettings):
@@ -19,6 +20,8 @@ class Settings(BaseSettings):
     jira_username: str
     jira_api_token: Optional[SecretStr] = None
     jira_password: Optional[SecretStr] = None
+    jira_auth_mode: Optional[str] = None  # "basic" or "bearer"
+    jira_api_version: Optional[str] = None  # "2" or "3"
     project_key: str
     default_board_id: Optional[int] = None
 
@@ -67,6 +70,16 @@ class Settings(BaseSettings):
         """Ensure at least one auth secret is provided."""
         if not self.jira_api_token and not self.jira_password:
             raise ValueError("Either jira_api_token or jira_password must be provided")
+        if self.jira_auth_mode:
+            mode = self.jira_auth_mode.lower()
+            if mode not in ("basic", "bearer"):
+                raise ValueError("jira_auth_mode must be 'basic' or 'bearer'")
+            self.jira_auth_mode = mode
+        if not self.jira_api_version:
+            host = urlparse(str(self.jira_url)).hostname or ""
+            # Jira Cloud typically uses API v3; Jira Server/Data Center usually uses v2.
+            self.jira_api_version = "3" if host.endswith("atlassian.net") else "2"
+        return self
         return self
 
 @lru_cache()
@@ -97,6 +110,10 @@ JIRA_USERNAME=your.email@domain.com
 JIRA_API_TOKEN=your_api_token
 # Optional for on-prem Jira instances that allow username/password auth
 JIRA_PASSWORD=your_password
+# Optional: basic or bearer (defaults to bearer if token-only; basic if password is provided)
+JIRA_AUTH_MODE=bearer
+# Optional: 2 or 3 (defaults to 3 for Atlassian Cloud, 2 for Server/DC)
+JIRA_API_VERSION=2
 PROJECT_KEY=PROJ
 DEFAULT_BOARD_ID=123
 

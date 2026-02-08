@@ -24,13 +24,18 @@ class JiraClient:
         auth_secret = settings.jira_password or settings.jira_api_token
         if auth_secret is None:
             raise JiraError("Jira auth missing: set JIRA_API_TOKEN or JIRA_PASSWORD")
-        self.auth_header = self._create_auth_header(
-            settings.jira_username,
-            auth_secret.get_secret_value()
-        )
+        self.auth_mode = settings.jira_auth_mode or ("basic" if settings.jira_password else "bearer")
+        self.auth_secret_value = auth_secret.get_secret_value()
+        if self.auth_mode == "basic":
+            self.auth_header = self._create_auth_header(
+                settings.jira_username,
+                self.auth_secret_value
+            )
         self.project_key = settings.project_key
         self.board_id = settings.default_board_id
         self.story_points_field = settings.story_points_field
+        self.api_version = settings.jira_api_version or "2"
+        self.api_base = f"{self.base_url}/rest/api/{self.api_version}"
         self.session: Optional[aiohttp.ClientSession] = None
         self.timeout = aiohttp.ClientTimeout(total=settings.jira_request_timeout)
 
@@ -89,7 +94,7 @@ class JiraClient:
 
         session = await self.get_session()
         async with session.post(
-            f"{self.base_url}/rest/api/3/issue",
+            f"{self.api_base}/issue",
             json=data
         ) as response:
             if response.status == 201:
@@ -153,7 +158,7 @@ class JiraClient:
         """Search issues using JQL (API v3)."""
         session = await self.get_session()
         async with session.post(
-            f"{self.base_url}/rest/api/3/search/jql",
+            f"{self.api_base}/search",
             json={
                 "jql": jql,
                 "maxResults": max_results,
@@ -175,7 +180,7 @@ class JiraClient:
         """Get the change history of an issue."""
         session = await self.get_session()
         async with session.get(
-            f"{self.base_url}/rest/api/3/issue/{issue_key}/changelog"
+            f"{self.api_base}/issue/{issue_key}/changelog"
         ) as response:
             if response.status == 200:
                 data = await response.json()
@@ -187,6 +192,12 @@ class JiraClient:
     # Helper methods
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Jira API requests."""
+        if self.auth_mode == "bearer":
+            return {
+                "Authorization": f"Bearer {self.auth_secret_value}",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
         return {
             "Authorization": f"Basic {self.auth_header}",
             "Content-Type": "application/json",
