@@ -90,6 +90,24 @@ async def list_tools() -> List[Tool]:
             }
         ),
         Tool(
+            name="change_issue_status",
+            description="Transition a Jira issue to a new status",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "issue_key": {
+                        "type": "string",
+                        "description": "Issue key (e.g., VGASEXP-1902)"
+                    },
+                    "target_status": {
+                        "type": "string",
+                        "description": "Target status name (e.g., In Review)"
+                    }
+                },
+                "required": ["issue_key", "target_status"]
+            }
+        ),
+        Tool(
             name="get_sprint_status",
             description="Get current sprint status and progress",
             inputSchema={
@@ -147,6 +165,8 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             return await handle_create_issue(arguments)
         elif name == "search_issues":
             return await handle_search_issues(arguments)
+        elif name == "change_issue_status":
+            return await handle_change_issue_status(arguments)
         elif name == "get_sprint_status":
             return await handle_sprint_status(arguments)
         elif name == "get_team_workload":
@@ -206,6 +226,17 @@ async def handle_search_issues(args: Dict[str, Any]) -> List[TextContent]:
             result_text += f"   Description: {description}\n\n"
     
     return [TextContent(type="text", text=result_text)]
+
+async def handle_change_issue_status(args: Dict[str, Any]) -> List[TextContent]:
+    """Handle change_issue_status tool call."""
+    issue_key = args["issue_key"]
+    target_status = args["target_status"]
+
+    new_status = await jira_client.transition_issue(issue_key, target_status)
+    return [TextContent(
+        type="text",
+        text=f"✅ {issue_key} transitioned to '{new_status}'"
+    )]
 
 async def handle_sprint_status(args: Dict[str, Any]) -> List[TextContent]:
     """Handle get_sprint_status tool call."""

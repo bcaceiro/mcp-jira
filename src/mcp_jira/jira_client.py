@@ -189,6 +189,43 @@ class JiraClient:
                 error_data = await response.text()
                 raise JiraError(f"Failed to get issue history: {error_data}")
 
+    async def transition_issue(self, issue_key: str, target_status: str) -> str:
+        """Transition an issue to the target status by name."""
+        session = await self.get_session()
+        async with session.get(
+            f"{self.api_base}/issue/{issue_key}/transitions"
+        ) as response:
+            if response.status == 200:
+                data = await response.json()
+                transitions = data.get("transitions", [])
+            else:
+                error_data = await response.text()
+                raise JiraError(f"Failed to get issue transitions: {error_data}")
+
+        normalized_target = target_status.strip().lower()
+        transition = next(
+            (t for t in transitions if t.get("name", "").strip().lower() == normalized_target),
+            None
+        )
+
+        if not transition:
+            available = ", ".join(t.get("name", "UNKNOWN") for t in transitions) or "None"
+            raise JiraError(
+                f"Transition '{target_status}' not available for {issue_key}. "
+                f"Available transitions: {available}"
+            )
+
+        transition_id = transition.get("id")
+        async with session.post(
+            f"{self.api_base}/issue/{issue_key}/transitions",
+            json={"transition": {"id": transition_id}}
+        ) as response:
+            if response.status in (200, 204):
+                return transition.get("name", target_status)
+            else:
+                error_data = await response.text()
+                raise JiraError(f"Failed to transition issue: {error_data}")
+
     # Helper methods
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Jira API requests."""
