@@ -7,6 +7,7 @@ A simple Model Context Protocol (MCP) server for Jira that allows LLMs to act as
 ### Core MCP Tools
 - **create_issue** - Create new Jira issues with proper formatting
 - **search_issues** - Search issues using JQL with smart formatting
+- **change_issue_status** - Transition an issue to a new status
 - **get_sprint_status** - Get comprehensive sprint progress reports
 - **get_team_workload** - Analyze team member workloads and capacity
 - **generate_standup_report** - Generate daily standup reports automatically
