@@ -182,6 +182,7 @@ async def handle_search_issues(args: Dict[str, Any]) -> List[TextContent]:
     """Handle search_issues tool call."""
     jql = args["jql"]
     max_results = args.get("max_results", 20)
+    include_description = True
     
     issues = await jira_client.search_issues(jql)
     issues = issues[:max_results]  # Limit results
@@ -200,6 +201,9 @@ async def handle_search_issues(args: Dict[str, Any]) -> List[TextContent]:
         
         result_text += f"{status_emoji} **{issue.key}**: {issue.summary}\n"
         result_text += f"   {priority_emoji} {issue.priority.value} | {issue.status.value}{assignee_text}{points_text}\n\n"
+        if include_description and issue.description:
+            description = issue.description.strip()
+            result_text += f"   Description: {description}\n\n"
     
     return [TextContent(type="text", text=result_text)]
 
